@@ -9,13 +9,28 @@
     var domainManager;
 
     function minifyJS(currentPath, filepath, customPath, options) {
-        var text;
+        var code = {};
+        var mapPath;
+        var inputFile = currentPath.split('/').pop();
+        var pathroot = filepath.split('/').slice(0, -1).join('/');
+
         try {
-            text = fs.readFileSync(currentPath).toString();
+            code[inputFile] = fs.readFileSync(currentPath).toString();
         } catch (err) {
             domainManager.emitEvent("minifyjs", "statusUpdate", err.toString());
         }
-        var minified = UglifyJS.minify(text, JSON.parse(options)).code;
+        
+        var optionsJSON = JSON.parse(options);
+        var uglyjs = UglifyJS.minify(code, optionsJSON);
+        var minified = uglyjs.code;
+        var map = uglyjs.map;
+      
+        if (optionsJSON.hasOwnProperty('sourceMap')) {
+            mapPath = optionsJSON.sourceMap.hasOwnProperty('url') ? pathroot + '/' + optionsJSON.sourceMap.url
+              : filepath + '.map';
+            mkfile(mapPath, customPath, map);
+        }
+        
         return mkfile(filepath, customPath, minified);
     }
 
